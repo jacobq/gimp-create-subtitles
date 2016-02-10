@@ -24,8 +24,8 @@ def plugin_main(#output_folder,
         lines = f.readlines()
         number_of_lines = len(lines)
         for line in lines:
-            # limit to 2 iterations for debugging
-            if (line_number > 3):
+            # limit iterations for debugging
+            if (line_number > 1):
                 break
             
             # Generate subtitle image
@@ -46,7 +46,7 @@ def plugin_main(#output_folder,
                 gimp.pdb.file_png_save_defaults(img, merged_layer, output_folder + directory_separator + png_file, png_file)
 
             if (not(show)):
-                gimp.pdb.gimp_display_delete( gimp.pdb.gimp_display_new(img) )
+                gimp.pdb.gimp_image_delete(img)
 
             line_number += 1
 
@@ -65,17 +65,30 @@ def create_subtitle(text, width, height, x, y, font, font_size_px, font_color):
     # Note: if you use RGBA_IMAGE here it doesn't output any warnings, but it gets interpreted as GRAY
     # Due to confusing the GimpImageBaseType and GimpImageType enum types
     img = gimp.Image(width, height, RGB) 
+
+    # Create the transparent background "Frame" layer and add it to the image
     background_layer = gimp.Layer(img, "Frame", width, height, RGBA_IMAGE, 100, NORMAL_MODE)
     gimp.pdb.gimp_image_insert_layer(img, background_layer, None, -1)
 
-    #gimp.pdb.gimp_palette_set_foreground(font_color);
+
+    # Create the text layer
     text_layer = gimp.pdb.gimp_text_fontname(img, None, float(x), float(y), text, -1, True, font_size_px, PIXELS, font)
     gimp.pdb.gimp_text_layer_resize(text_layer, width-x, height-y)
     gimp.pdb.gimp_text_layer_set_justification(text_layer, TEXT_JUSTIFY_CENTER)
     gimp.pdb.gimp_text_layer_set_color(text_layer, font_color)
-    #img.add_layer(text_layer, 0)
+    #gimp.pdb.gimp_image_insert_layer(img, text_layer, None, 1) # Seems to get added automatically so this isn't needed
 
+    # Create outline in layer behind text
+    outline_layer = gimp.Layer(img, "Outline", width, height, RGBA_IMAGE, 100, NORMAL_MODE)
+    gimp.pdb.gimp_image_insert_layer(img, outline_layer, None, 1)
     
+    # Create path/vectors from text and stroke it on outline layer
+    vectors = gimp.pdb.gimp_vectors_new_from_text_layer(img, text_layer)
+    gimp.pdb.gimp_image_insert_vectors(img, vectors, None, -1)
+    gimp.pdb.gimp_edit_stroke_vectors(outline_layer, vectors)
+    
+    # Run "Drop Shadow" plugin/script
+    gimp.pdb.script_fu_drop_shadow(img, text_layer, 5, 5, 10, (0,0,0), 100, False)
     return img
     
 
