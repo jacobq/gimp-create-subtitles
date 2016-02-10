@@ -4,7 +4,11 @@ from gimpfu import *
 
 def plugin_main(#output_folder,
                 text_file, width=1920, height=1080, x=0, y=0, font="Courier New", font_size_px=48, font_color=(0,0,0)):
-    output_folder = "C:\\Users\\Jacob\\Desktop\\subtitles"
+    # FIXME: Allow a folder to be selected as an input parameter -- this is not only more convenient but should help make this less platform-specific
+    #output_folder = "C:\\Users\\Jacob\\Desktop\\subtitles"
+    #directory_separator = "\\"
+    output_folder = "/home/jquant/subtitles"
+    directory_separator = "/"
     #gimp.message("Got parameters:\n"
     #    + "output_folder: " + output_folder + "\n"
     #    + "text_file: " + text_file + "\n"
@@ -29,8 +33,8 @@ def plugin_main(#output_folder,
             filename_without_extension = "subtitle_" + str(line_number).zfill(len(str(number_of_lines)))
             png_file = filename_without_extension + ".png"
             xcf_file = filename_without_extension + ".xcf"
-            gimp.pdb.file_png_save_defaults(img, img.active_layer, output_folder + "\\" + png_file, png_file)
-            gimp.pdb.gimp_xcf_save(0, img, img.active_layer, output_folder + "\\" + xcf_file, xcf_file)
+            gimp.pdb.file_png_save_defaults(img, img.active_layer, output_folder + directory_separator + png_file, png_file)
+            gimp.pdb.gimp_xcf_save(0, img, img.active_layer, output_folder + directory_separator + xcf_file, xcf_file)
             line_number += 1
                 
 def create_subtitle(text, width, height, x, y, font, font_size_px, font_color):
@@ -41,13 +45,15 @@ def create_subtitle(text, width, height, x, y, font, font_size_px, font_color):
     #    + "x: " + str(x) + "\n"
     #    + "y: " + str(y) + "\n"
     #    + "font: " + font + "\n"
-    #    + "font_size_px: " + str(font_size_px)
+    #    + "font_size_px: " + str(font_size_px) + "\n"
+    #    + "font_color: " + str(font_color)
     #    )
     img = gimp.Image(width, height, RGB_IMAGE)
-    #layer = gimp.Layer(img, "Text", width, height, RGB_IMAGE, 100, NORMAL_MODE)
     gimp.pdb.gimp_palette_set_foreground(font_color);
     text_layer = gimp.pdb.gimp_text_fontname(img, None, float(x), float(y), text, -1, True, font_size_px, PIXELS, font)
-    text_layer.add_alpha()
+    gimp.pdb.gimp_text_layer_resize(text_layer, width-x, height-y)
+    gimp.pdb.gimp_text_layer_set_justification(text_layer, TEXT_JUSTIFY_CENTER)
+    #text_layer.add_alpha()
     return img
     
 
