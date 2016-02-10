@@ -3,7 +3,7 @@
 from gimpfu import *
 
 def plugin_main(#output_folder,
-                text_file, width=1920, height=1080, x=0, y=0, font="Courier New", font_size_px=48, font_color=(0,0,0)):
+                text_file, width=1920, height=1080, x=0, y=0, font="Courier New", font_size_px=48, font_color=(0,0,0), save_png=False, save_xcf=False, show=False):
     # FIXME: Allow a folder to be selected as an input parameter -- this is not only more convenient but should help make this less platform-specific
     #output_folder = "C:\\Users\\Jacob\\Desktop\\subtitles"
     #directory_separator = "\\"
@@ -25,17 +25,31 @@ def plugin_main(#output_folder,
         number_of_lines = len(lines)
         for line in lines:
             # limit to 2 iterations for debugging
-            if (line_number > 2):
+            if (line_number > 3):
                 break
             
+            # Generate subtitle image
             img = create_subtitle(line.strip(), width, height, x, y, font, font_size_px, font_color);
-            #layer = gimp.pdb.gimp_image_flatten(img) # strips alpha channel!
+
+            # Show the image
+            if (show):
+                gimp.Display(img)
+                gimp.displays_flush()
+
             filename_without_extension = "subtitle_" + str(line_number).zfill(len(str(number_of_lines)))
-            png_file = filename_without_extension + ".png"
-            xcf_file = filename_without_extension + ".xcf"
-            gimp.pdb.file_png_save_defaults(img, img.active_layer, output_folder + directory_separator + png_file, png_file)
-            gimp.pdb.gimp_xcf_save(0, img, img.active_layer, output_folder + directory_separator + xcf_file, xcf_file)
+            if (save_xcf):
+                xcf_file = filename_without_extension + ".xcf"
+                gimp.pdb.gimp_xcf_save(0, img, img.active_layer, output_folder + directory_separator + xcf_file, xcf_file)
+            if (save_png):
+                merged_layer = gimp.pdb.gimp_image_merge_visible_layers(img, 0)
+                png_file = filename_without_extension + ".png"
+                gimp.pdb.file_png_save_defaults(img, merged_layer, output_folder + directory_separator + png_file, png_file)
+
+            if (not(show)):
+                gimp.pdb.gimp_display_delete( gimp.pdb.gimp_display_new(img) )
+
             line_number += 1
+
                 
 def create_subtitle(text, width, height, x, y, font, font_size_px, font_color):
     #gimp.message("Got parameters:\n"
@@ -48,12 +62,20 @@ def create_subtitle(text, width, height, x, y, font, font_size_px, font_color):
     #    + "font_size_px: " + str(font_size_px) + "\n"
     #    + "font_color: " + str(font_color)
     #    )
-    img = gimp.Image(width, height, RGB_IMAGE)
-    gimp.pdb.gimp_palette_set_foreground(font_color);
+    # Note: if you use RGBA_IMAGE here it doesn't output any warnings, but it gets interpreted as GRAY
+    # Due to confusing the GimpImageBaseType and GimpImageType enum types
+    img = gimp.Image(width, height, RGB) 
+    background_layer = gimp.Layer(img, "Frame", width, height, RGBA_IMAGE, 100, NORMAL_MODE)
+    gimp.pdb.gimp_image_insert_layer(img, background_layer, None, -1)
+
+    #gimp.pdb.gimp_palette_set_foreground(font_color);
     text_layer = gimp.pdb.gimp_text_fontname(img, None, float(x), float(y), text, -1, True, font_size_px, PIXELS, font)
     gimp.pdb.gimp_text_layer_resize(text_layer, width-x, height-y)
     gimp.pdb.gimp_text_layer_set_justification(text_layer, TEXT_JUSTIFY_CENTER)
-    #text_layer.add_alpha()
+    gimp.pdb.gimp_text_layer_set_color(text_layer, font_color)
+    #img.add_layer(text_layer, 0)
+
+    
     return img
     
 
@@ -76,7 +98,10 @@ register(
             (PF_INT, "y_text", "The top-left Y coordinate to use for locating the text", 566),
             (PF_FONT, "font", "The font to be used while generating the subtitles", "Segoe UI Bold"),
             (PF_INT, "font_size_px", "The size of the font (in px)", 48),
-            (PF_COLOR, "font_color", "The color of the font", (255, 255, 255))
+            (PF_COLOR, "font_color", "The color of the font", (255, 255, 255)),
+            (PF_BOOL, "save_png", "Save generated images as PNG files", False),
+            (PF_BOOL, "save_xcf", "Save generated images as XCF files", False),
+            (PF_BOOL, "show_images", "Display the images and don't close them", False)
         ],
         [],
         plugin_main)
