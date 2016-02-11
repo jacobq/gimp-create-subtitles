@@ -74,7 +74,7 @@ def plugin_main(output_folder, text_file, frame_width, frame_height,
         #gimp.pdb.gimp_image_insert_layer(img, transparent_bg_layer, None, 1)
         #merged_layer = gimp.pdb.gimp_image_merge_visible_layers(img, EXPAND_AS_NECESSARY)    
     
-        filename_without_extension = "subtitle_" + str(current_frame).zfill(len(str(number_of_labels)))
+        filename_without_extension = "subtitle_" + str(current_frame).zfill(len(str(number_of_frames)))
         if (save_png):
             png_file = filename_without_extension + ".png"
             gimp.pdb.gimp_file_save(img, copy, output_folder + directory_separator + png_file, png_file)
@@ -97,12 +97,14 @@ def plugin_main(output_folder, text_file, frame_width, frame_height,
         current_label = 1
         labels = f.readlines()
         number_of_labels = len(labels)
+        number_of_frames = int(float(labels[-1].split("\t")[1]) * frame_rate)
+
         for label in labels:
             # Parse label row/line/record: file should be tab-delimited: (start, stop, text)
             [start, stop, text] = label.split("\t")
             start = float(start)
             stop = float(stop)
-            text = text.strip();
+            text = text.decode('string_escape') # Allow \n to be interpreted as newline, etc.
             
             # Calculate keyframes for this label/record/cue
             start_frame = int(start * frame_rate)
