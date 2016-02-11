@@ -142,7 +142,7 @@ def plugin_main(output_folder, text_file, frame_width, frame_height,
             # Fade-in
             while (current_frame < fade_in_end_frame):
                 opacity = ease(start_frame, current_frame, fade_in_end_frame, 0, 100)
-                gimp.message("opacity = " + str(opacity));
+                #gimp.message("opacity = " + str(opacity));
                 gimp.pdb.gimp_layer_set_opacity(merged_layer, opacity)
                 save_frame(img)
                 current_frame += 1
@@ -159,7 +159,9 @@ def plugin_main(output_folder, text_file, frame_width, frame_height,
                 
             # Fade-out
             while (current_frame < end_frame):
-                gimp.pdb.gimp_layer_set_opacity(merged_layer, ease(fade_out_start_frame, current_frame, end_frame, 0, 100))
+                opacity = ease(fade_out_start_frame, current_frame, end_frame, 100, 0)
+                #gimp.message("opacity = " + str(opacity));
+                gimp.pdb.gimp_layer_set_opacity(merged_layer, opacity)
                 save_frame(img)
                 current_frame += 1
             
@@ -170,8 +172,8 @@ def plugin_main(output_folder, text_file, frame_width, frame_height,
 
             current_label += 1
             # limit iterations for debugging
-            if (current_label > 1):
-                break
+            #if (current_label > 1):
+            #    break
                 
                    
 
@@ -190,13 +192,13 @@ register(
             (PF_INT, "frame_width", "The width of the images to be created", 1280),
             (PF_INT, "frame_height", "The height of the images to be created", 720),
             (PF_INT, "text_x", "The top-left X coordinate to use for locating the text", 20),
-            (PF_INT, "text_y", "The top-left Y coordinate to use for locating the text", 566),
+            (PF_INT, "text_y", "The top-left Y coordinate to use for locating the text", 600),
             (PF_INT, "text_width", "The width of the text box", 1240),
             (PF_INT, "text_height", "The height of the text box", 154),
             (PF_FONT, "font", "The font to be used while generating the subtitles", "Segoe UI Bold"),
-            (PF_INT, "font_size_px", "The size of the font (in px)", 48),
+            (PF_INT, "font_size_px", "The size of the font (in px)", 40),
             (PF_COLOR, "font_color", "The color of the font", (255, 255, 255)),
-            (PF_TOGGLE, "save_png", "Save generated images as PNG files", False),
+            (PF_TOGGLE, "save_png", "Save generated images as PNG files", True),
             (PF_TOGGLE, "show_images", "Display the images and don't close them", False),
             (PF_TOGGLE, "add_outline", "Stroke the outline of the text", True),
             (PF_COLOR, "outline_color", "The color of the outline", (0, 0, 0)),
