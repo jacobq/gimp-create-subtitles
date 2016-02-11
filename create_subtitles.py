@@ -56,23 +56,40 @@ def plugin_main(output_folder, text_file, frame_width, frame_height,
         return img
     
     def save_frame(img):
+        # To work-around annoying loss-of-opacity-when-saving problem:
+        # 1. Duplicate the main/merged layer and hide it
+        # 2. Add a transparent layer at full opacity
+        # 3. Merge visible layers
+        #original_layer = img.active_layer
+        #pdb.gimp_edit_copy(original_layer)
+        #working_layer = gimp.Layer(img, "Working", frame_width, frame_height, RGBA_IMAGE, 100, NORMAL_MODE)
+        #pdb.gimp_edit_paste(working_layer)
+        
+        #original_layer
+        
+        copy = gimp.pdb.gimp_layer_new_from_visible(img, img, "copy")
+        gimp.pdb.gimp_image_insert_layer(img, copy, None, 1)
+        
+        #transparent_bg_layer = gimp.Layer(img, "Transparent BG", frame_width, frame_height, RGBA_IMAGE, 100, NORMAL_MODE)
+        #gimp.pdb.gimp_image_insert_layer(img, transparent_bg_layer, None, 1)
+        #merged_layer = gimp.pdb.gimp_image_merge_visible_layers(img, EXPAND_AS_NECESSARY)    
+    
         filename_without_extension = "subtitle_" + str(current_frame).zfill(len(str(number_of_labels)))
         if (save_png):
             png_file = filename_without_extension + ".png"
-            gimp.pdb.file_png_save_defaults(img, img.active_layer, output_folder + directory_separator + png_file, png_file)
+            gimp.pdb.gimp_file_save(img, copy, output_folder + directory_separator + png_file, png_file)
+        
+        gimp.pdb.gimp_image_remove_layer(img, copy)
             
     # TODO: Support other easing functions besides linear
     def ease(in_min, in_current, in_max, out_start, out_end, type="linear"):
-        progress = (in_current - in_min) / (in_max - in_min)
+        progress = float((in_current - in_min)) / float((in_max - in_min))
         if (out_start > out_end):
             progress = 1 - progress
             temp = out_start
             out_start = out_end
             out_end = temp
         result = progress * (out_end - out_start) + out_start
-        if (result > out_end):
-            gimp.message(" ".join([str(in_min), str(in_current), str(in_max), str(out_start), str(out_end)]));
-            result = out_end
         return float(result)
 
     with open(text_file) as f:
@@ -92,18 +109,6 @@ def plugin_main(output_folder, text_file, frame_width, frame_height,
             fade_in_end_frame = int((start + fade_time) * frame_rate)
             fade_out_start_frame = max(fade_in_end_frame, int((stop - fade_time) * frame_rate))
             end_frame = int(stop * frame_rate)
-
-            # debug
-            if (current_frame == start_frame and current_frame < 1000):
-                gimp.message(
-                      "start: " + str(start) + "\n"
-                    + "stop: " + str(stop) + "\n"
-                    + "text: " + text + "\n"
-                    + "start_frame: " + start_frame + "\n"
-                    + "fade_in_end_frame: " + fade_in_end_frame + "\n"
-                    + "fade_out_start_frame: " + fade_out_start_frame + "\n"
-                    + "end_frame: " + end_frame + "\n"
-                    )
             
             # Generate the subtitle image
             img = generate_subtitle_image()
@@ -117,6 +122,16 @@ def plugin_main(output_folder, text_file, frame_width, frame_height,
             # Start as faded-out
             gimp.pdb.gimp_layer_set_opacity(merged_layer, 0)
 
+            #DEBUG 
+            #gimp.message(
+            #      "start: " + str(start) + "\n"
+            #    + "stop: " + str(stop) + "\n"
+            #    + "text: " + text + "\n"
+            #    + "start_frame: " + str(start_frame) + "\n"
+            #    + "fade_in_end_frame: " + str(fade_in_end_frame) + "\n"
+            #    + "fade_out_start_frame: " + str(fade_out_start_frame) + "\n"
+            #    + "end_frame: " + str(end_frame) + "\n"
+            #    )
                         
             # Seek first point where we fade this in
             while (current_frame < start_frame):
@@ -126,12 +141,16 @@ def plugin_main(output_folder, text_file, frame_width, frame_height,
             
             # Fade-in
             while (current_frame < fade_in_end_frame):
-                gimp.pdb.gimp_layer_set_opacity(merged_layer, ease(start_frame, current_frame, fade_in_end_frame, 0, 100))
+                opacity = ease(start_frame, current_frame, fade_in_end_frame, 0, 100)
+                gimp.message("opacity = " + str(opacity));
+                gimp.pdb.gimp_layer_set_opacity(merged_layer, opacity)
                 save_frame(img)
                 current_frame += 1
+
             
             # Now we're faded-in
             gimp.pdb.gimp_layer_set_opacity(merged_layer, 100)
+
             
             # Seek fade-out start
             while (current_frame < fade_out_start_frame):
